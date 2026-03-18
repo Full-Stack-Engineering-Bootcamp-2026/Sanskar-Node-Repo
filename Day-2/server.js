@@ -1,10 +1,8 @@
 import http from 'http';
 
 const server = http.createServer((req, res) => {
-    const { method, url } = req;    
-    const parsedUrl = new URL(url, `http://${req.headers.host}`);
-    const pathName = parsedUrl.pathname;
-    if (pathName == "/api") {
+    const {url}= req;    
+    if (url == "/api") {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({
             name: "Sanskar Rajput",
@@ -18,6 +16,6 @@ const server = http.createServer((req, res) => {
 
 });
 
-server.listen(3000, () => {
+server.listen(4000, () => {
     console.log("Listening at port 3000");
 })
