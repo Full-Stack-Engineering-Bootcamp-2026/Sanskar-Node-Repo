@@ -1,5 +1,5 @@
 const path = require('path');
-require('dotenv').config()
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
@@ -19,7 +19,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use((req, res, next) => {
-  User.findById('69d7d0d1d34669da504e3de3')
+  User.findById('5bab316ce0a7c75f783cb8a8')
     .then(user => {
       req.user = user;
       next();
@@ -32,22 +32,25 @@ app.use(shopRoutes);
 
 app.use(errorController.get404);
 
-mongoose.connect(`mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.bqfim3v.mongodb.net/?appName=Cluster0`).then(result => {
-  User.findOne().then(user => {
-    if (!user) {
-      const user = new User({
-        name: "Sanskar",
-        email: "test@test.com",
-        cart: {
-          items: []
-        }
-      })
-      user.save();
-    }
+mongoose
+  .connect(
+    'mongodb+srv://maximilian:9u4biljMQc4jjqbe@cluster0-ntrwp.mongodb.net/shop?retryWrites=true'
+  )
+  .then(result => {
+    User.findOne().then(user => {
+      if (!user) {
+        const user = new User({
+          name: 'Max',
+          email: 'max@test.com',
+          cart: {
+            items: []
+          }
+        });
+        user.save();
+      }
+    });
+    app.listen(3000);
   })
-
-  app.listen(3000)
-})
   .catch(err => {
     console.log(err);
   });
