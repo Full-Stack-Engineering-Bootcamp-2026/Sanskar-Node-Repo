@@ -14,17 +14,20 @@
     "nodemon": "^3.1.14"
   },
   "dependencies": {
-    "bcrypt": "^6.0.0",
-    "body-parser": "^2.2.2",
-    "connect-mongodb-session": "^5.0.0",
+    "@sendgrid/mail": "^8.1.6",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.18.3",
+    "connect-flash": "^0.1.1",
+    "connect-mongodb-session": "^2.0.3",
+    "csurf": "^1.2.2",
     "dotenv": "^17.4.2",
     "ejs": "^5.0.2",
-    "express": "^5.2.1",
+    "express": "^4.16.3",
     "express-handlebars": "^9.0.1",
-    "express-session": "^1.19.0",
-    "mongodb": "^7.1.1",
+    "express-session": "^1.15.6",
+    "mongodb": "^3.1.6",
     "mongoose": "^9.4.1",
-    "mysql2": "^3.22.0",
+    "mysql2": "^3.22.1",
     "pug": "^3.0.4",
     "sequelize": "^6.37.8"
   }
