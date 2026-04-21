@@ -13,7 +13,12 @@ exports.getLogin = (req, res, next) => {
   res.render('auth/login', {
     path: '/login',
     pageTitle: 'Login',
-    errorMessage: message
+    errorMessage: message,
+    oldInput: {
+      email: '',
+      password: ''
+    },
+    validationErrors: []
   });
 };
 
@@ -27,19 +32,47 @@ exports.getSignup = (req, res, next) => {
   res.render('auth/signup', {
     path: '/signup',
     pageTitle: 'Signup',
-    errorMessage: message
+    errorMessage: message,
+    oldInput: {
+      email: '',
+      password: '',
+      confirmPassword: ''
+    },
+    validationErrors: []
   });
 };
 
 exports.postLogin = async (req, res, next) => {
   const email = req.body.email;
   const password = req.body.password;
-  const user = await User.findOne({ email: email })
-  if (!user) {
-    req.flash('error', 'Invalid email or password.');
-    return res.redirect('/login');
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(422).render('auth/login', {
+      path: '/login',
+      pageTitle: 'Login',
+      errorMessage: errors.array()[0].msg,
+      oldInput: {
+        email: email,
+        password: password
+      },
+      validationErrors: errors.array()
+    });
   }
   try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(422).render('auth/login', {
+        path: '/login',
+        pageTitle: 'Login',
+        errorMessage: 'Invalid email or password.',
+        oldInput: {
+          email: email,
+          password: password
+        },
+        validationErrors: []
+      });
+    }
     const doMatch = await bcrypt.compare(password, user.password)
     if (doMatch) {
       req.session.isLoggedIn = true;
@@ -49,39 +82,57 @@ exports.postLogin = async (req, res, next) => {
         res.redirect('/');
       });
     }
-    req.flash('error', 'Invalid email or password.');
-    res.redirect('/login');
+    return res.status(422).render('auth/login', {
+      path: '/login',
+      pageTitle: 'Login',
+      errorMessage: 'Invalid email or password.',
+      oldInput: {
+        email: email,
+        password: password
+      },
+      validationErrors: []
+    });
   }
   catch (err) {
-    console.log(err);
-    res.redirect('/login');
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error);
   }
 };
 
 exports.postSignup = async (req, res, next) => {
   const email = req.body.email;
   const password = req.body.password;
-  const confirmPassword = req.body.confirmPassword;
+
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    console.log(errors.array());
+    return res.status(422).render('auth/signup', {
+      path: '/signup',
+      pageTitle: 'Signup',
+      errorMessage: errors.array()[0].msg,
+      oldInput: {
+        email: email,
+        password: password,
+        confirmPassword: req.body.confirmPassword
+      },
+      validationErrors: errors.array()
+    });
+  }
   try {
-    const userDoc = await User.findOne({ email: email });
-    if (userDoc) {
-      req.flash('error', 'E-Mail exists already, please pick a different one.');
-      return res.redirect('/signup');
-    }
     const hashedPassword = await bcrypt.hash(password, 12);
     const user = new User({
       email: email,
       password: hashedPassword,
       cart: { items: [] }
     });
-    console.log("User:", user);
     await user.save();
-    res.redirect('/login');
-    const html = `<h1>Registered</h1>`
-    return sendEmail(email, html);
+    return res.redirect('/login');
   }
   catch (err) {
-    console.log(err);
+    const error = new Error(err);
+    error.httpStatusCode = 500;
+    return next(error);
   }
 };
 
@@ -104,25 +155,32 @@ exports.getReset = (req, res, next) => {
     pageTitle: 'Reset Password',
     errorMessage: message
   });
-}
-exports.postReset = async (req, res, next) => {
-  try {
-    const buffer = await crypto.randomBytes(32);
-    const token = buffer.toString('hex');
-    const user = await User.findOne({ email: req.body.email });
-    if (!user) {
-      req.flash("error", 'No account found with that email');
+};
+
+exports.postReset = async(req, res, next) => {
+  crypto.randomBytes(32, async(err, buffer) => {
+    if (err) {
+      console.log(err);
       return res.redirect('/reset');
     }
-    user.resetToken = token;
-    user.resetTokenExpiration = Date.now();
-    await user.save();
-    const html = `<p>Click  <a href="http://localhost:3001/reset/${token}">link</a> to reset</p>`;
-    await sendEmail(req.body.email, html);
-  }
-  catch (err) {
-    console.log(err);
-  }
+    const token = buffer.toString('hex');
+    try {
+      const user = await User.findOne({ email: req.body.email });
+      if (!user) {
+        req.flash("error", 'No account found with that email');
+        return res.redirect('/reset');
+      }
+      user.resetToken = token;
+      user.resetTokenExpiration = Date.now();
+      await user.save();
+      const html = `<p>Click  <a href="http://localhost:3001/reset/${token}">link</a> to reset</p>`;
+      await sendEmail(req.body.email, html);
+    }
+    catch (err) {
+      console.log(err);
+    }
+  })
+  
 }
 
 
@@ -147,7 +205,7 @@ exports.getNewPassword = async (req, res, next) => {
       pageTitle: 'New Password',
       errorMessage: message,
       userId: user._id.toString(),
-      passwordToken:token
+      passwordToken: token
     });
   }
   catch (err) {
@@ -157,11 +215,11 @@ exports.getNewPassword = async (req, res, next) => {
 }
 
 exports.postNewPassword = async (req, res, next) => {
-  const {password,userId,passwordToken} = req.body;
-  
+  const { password, userId, passwordToken } = req.body;
+
   try {
-    const user = await User.findOne({resetToken:passwordToken,resetTokenExpiration:{$lt:Date.now()},_id:userId});
-    const hashedPassword = await bcrypt.hash(password,12);
+    const user = await User.findOne({ resetToken: passwordToken, resetTokenExpiration: { $lt: Date.now() }, _id: userId });
+    const hashedPassword = await bcrypt.hash(password, 12);
     user.password = hashedPassword;
     user.resetToken = undefined;
     user.resetTokenExpiration = undefined;
