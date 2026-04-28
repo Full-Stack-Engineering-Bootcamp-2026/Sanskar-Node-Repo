@@ -1,4 +1,3 @@
-import { required } from 'joi';
 import mongoose from 'mongoose';
 const Schema = mongoose.Schema;
 
@@ -18,7 +17,7 @@ const postSchema = new Schema(
     },
     creator: {
       type: Object,
-      required: String
+      required: true
     }
   },
   { timestamps: true }

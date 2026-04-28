@@ -1,28 +1,41 @@
-import express from 'express';
+import express, { Request, Response, NextFunction, Router } from 'express';
 import Joi from 'joi';
-import { Request,Response,NextFunction } from 'express';
 import FeedController from '../controllers/feed.controller.js';
-const postSchema = Joi.object({
-  title: Joi.string().min(7).required(),
-  imageUrl: Joi.string().min(3).required(),
-  content: Joi.string().min(5).required(),
-  creator: Joi.string().min(2).required()
-});
+import { Service } from 'typedi';
 
-const router = express.Router();
-const controller = new FeedController();
-router.get('/posts', controller.getPosts.bind(controller));
-router.post("/posts",(req:Request,res:Response,next:NextFunction)=>{
-    const {error} = postSchema.validate(req.body);
-    if(error){
-        return res.status(422).json({
-            message:"Validation error",
-            error:error.details[0].message
-        });
+@Service()
+export default class FeedRoutes {
+    public router: Router;
+    private controller: FeedController
+    constructor(controller: FeedController) {
+        this.router = express.Router();
+        this.controller = controller;
+        this.initializeRoutes();
     }
-    next();
-},controller.createPost.bind(controller))
+    private postSchema = Joi.object({
+        title: Joi.string().min(7).required(),
+        imageUrl: Joi.string().min(3).required(),
+        content: Joi.string().min(5).required(),
+        creator: Joi.string().min(2).required()
+    });
 
-router.get('/posts/:postId', controller.getPost.bind(controller));
+    private validatePost(req: Request, res: Response, next: NextFunction) {
+        const { error } = this.postSchema.validate(req.body);
+        if (error) {
+            return res.status(422).json({
+                message: "Validation error",
+                error: error.details[0].message
+            });
+        }
+        next();
+    }
 
-export default router;
+    private initializeRoutes() {
+        this.router.get('/posts/:postId', this.controller.getPost.bind(this.controller));
+
+        this.router.put("/posts/:postId", this.controller.updatePost.bind(this.controller));
+
+        this.router.delete("/posts/:postId", this.controller.deletePost.bind(this.controller));
+    }
+
+}
