@@ -1,7 +1,8 @@
-import { Container } from "typedi";
+import { Container, Service } from "typedi";
 import { AuthService } from "../services/auth.service.js";
 import { NextFunction, Request, Response } from "express";
 
+@Service()
 export default class AuthController {
     private authService = Container.get(AuthService);
     async signup(req: Request, res: Response, next: NextFunction) {
@@ -28,7 +29,7 @@ export default class AuthController {
             if (result)
                 res.status(200).json({
                     message: "Login successfull",
-                    result
+                    ...result
                 })
             else
                 res.status(401).json({
